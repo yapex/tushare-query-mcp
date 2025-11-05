@@ -1,7 +1,95 @@
 [project]
 name = "tushare-query-mcp"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP wrapper for tushare API - Query Chinese stock financial data"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+license = { text = "MIT" }
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.121.0",
+    "uvicorn[standard]>=0.32.0",
+    # MCP (Model Context Protocol)
+    "mcp>=1.20.0",
+    # Financial Data API
+    "tushare>=1.2.0",
+    # Data Processing
+    "pandas>=2.0.0",
+    "pydantic>=2.0.0",
+    # Configuration
+    "pydantic-settings>=2.11.0",
+    # HTTP Client
+    "httpx>=0.28.0",
+    # Cache support
+    "diskcache>=5.6.0",
+    "typer>=0.20.0",
+    "rich>=14.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "httpx>=0.28.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+# 🔧 代码质量工具
+[tool.poe.tasks]
+format = {shell = "black src/ tests/ && isort src/ tests/", help = "格式化代码"}
+lint = {shell = "black src/ tests/ --check && isort src/ tests/ --check", help = "代码检查"}
+test = {shell = "pytest tests/ -v", help = "运行测试"}
+test-cov = {shell = "pytest tests/ --cov=src/tushare_query_mcp --cov-report=html --cov-report=term", help = "运行测试并生成覆盖率报告"}
+
+# 🚀 服务管理
+start = {cmd = "python scripts/start_server.py", help = "启动所有服务 (FastAPI + MCP)"}
+stop = {cmd = "python scripts/stop_services.py", help = "停止所有相关服务进程"}
+restart = {shell = "poe stop && sleep 2 && poe start", help = "重启所有服务"}
+
+# 🔧 测试配置
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--strict-config",
+    "--disable-warnings"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "asyncio: marks tests as async"
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "flake8>=7.3.0",
+    "isort>=7.0.0",
+    "poethepoet>=0.37.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
