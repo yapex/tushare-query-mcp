@@ -505,8 +505,7 @@ def run_mcp_server():
         logger.info("🚀 启动Tushare Query MCP服务器...")
 
         # 通过stdio运行MCP服务器
-        import asyncio
-        asyncio.run(server.run())
+        server.run()
 
     except Exception as e:
         logger.error(f"启动MCP服务器失败: {str(e)}", exc_info=True)
