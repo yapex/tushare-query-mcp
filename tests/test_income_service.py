@@ -36,14 +36,11 @@ class TestIncomeService:
         return mock_source
 
     @pytest.fixture
-    def income_service(self, mock_config, mock_tushare_source):
-        """创建IncomeService实例"""
-        with patch(
-            "tushare_query_mcp.services.base_service.TushareDataSource"
-        ) as mock_datasource_class:
-            mock_datasource_class.return_value = mock_tushare_source
-            service = IncomeService(mock_config["tushare_token"])
-            return service
+    def income_service(self, mock_tushare_source):
+        """创建IncomeService实例 - 使用依赖注入"""
+        # 直接注入mock数据源，避免使用patch
+        service = IncomeService(mock_tushare_source)
+        return service
 
     @pytest.fixture
     def sample_raw_data(self):
@@ -104,12 +101,12 @@ class TestIncomeService:
     def test_service_initialization(self, mock_config):
         """测试服务初始化"""
         with patch(
-            "tushare_query_mcp.services.base_service.TushareDataSource"
+            "tushare_query_mcp.services.income_service.TushareDataSource"
         ) as mock_datasource_class:
             service = IncomeService(mock_config["tushare_token"])
 
             mock_datasource_class.assert_called_once_with(mock_config["tushare_token"])
-            assert service.tushare_source is not None
+            assert service.data_source is not None
             assert service.service_name == "利润表"
 
     @pytest.mark.asyncio

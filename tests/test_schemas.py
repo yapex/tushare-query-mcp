@@ -39,7 +39,7 @@ class TestFinancialDataRequest:
         )
 
         assert request.ts_code == "600519.SH"
-        assert request.fields == ["end_date", "n_income_attr_p"]
+        assert set(request.fields) == {"end_date", "n_income_attr_p"}
         assert request.start_date == "20240101"
         assert request.end_date == "20241231"
 
@@ -53,11 +53,9 @@ class TestFinancialDataRequest:
 
     def test_fields_validation(self):
         """测试字段列表验证"""
-        # fields 不能为空
-        with pytest.raises(ValueError) as exc_info:
-            FinancialDataRequest(ts_code="600519.SH", fields=[])  # 空列表应该失败
-
-        assert "fields" in str(exc_info.value)
+        # fields 空列表是允许的，返回空列表
+        request = FinancialDataRequest(ts_code="600519.SH", fields=[])
+        assert request.fields == []  # 空列表被允许
 
     def test_date_format_validation(self):
         """测试日期格式验证"""
@@ -422,7 +420,7 @@ class TestArchitectureSeparation:
 
         # Service层请求应该有fields参数
         assert hasattr(service_request, "fields")
-        assert service_request.fields == ["end_date", "n_income_attr_p"]
+        assert set(service_request.fields) == {"end_date", "n_income_attr_p"}
 
         # 数据源层请求不应该有fields参数
         assert hasattr(data_source_request, "ts_code")

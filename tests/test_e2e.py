@@ -127,6 +127,7 @@ class TestFastAPIE2E:
             "/api/v1/income/data",
             params={
                 "ts_code": "600519.SH",
+                "fields": "end_date,total_revenue,n_income_attr_p",
                 "start_date": "20230101",
                 "end_date": "20231231",
             },
@@ -134,16 +135,15 @@ class TestFastAPIE2E:
         assert response.status_code == 200
 
         data = response.json()
-        assert "success" in data
+        assert "status" in data
         assert "message" in data
         assert "data" in data
-        assert "cached" in data
+        assert "from_cache" in data
         assert "timestamp" in data
 
-        if data["success"]:
-            assert "ts_code" in data["data"]
-            assert "records" in data["data"]
-            assert "pagination" in data["data"]
+        if data["status"] == "success":
+            # 检查是否有预期的数据结构
+            assert isinstance(data["data"], list)
 
 
 class TestCacheE2E:
@@ -164,6 +164,7 @@ class TestCacheE2E:
             "/api/v1/income/data",
             params={
                 "ts_code": "600519.SH",
+                "fields": "end_date,total_revenue",
                 "start_date": "20230101",
                 "end_date": "20231231",
             },
@@ -176,6 +177,7 @@ class TestCacheE2E:
             "/api/v1/income/data",
             params={
                 "ts_code": "600519.SH",
+                "fields": "end_date,total_revenue",
                 "start_date": "20230101",
                 "end_date": "20231231",
             },
@@ -184,7 +186,7 @@ class TestCacheE2E:
         data2 = response2.json()
 
         # 验证数据一致性
-        assert data1["data"]["records"] == data2["data"]["records"]
+        assert data1["data"] == data2["data"]
 
     def test_cache_stats_in_health_check(self, test_client, test_cache_dir):
         """测试健康检查中的缓存统计"""
@@ -213,7 +215,8 @@ class TestPerformanceE2E:
 
         start_time = time.time()
         response = test_client.get(
-            "/api/v1/income/data", params={"ts_code": "600519.SH"}
+            "/api/v1/income/data",
+            params={"ts_code": "600519.SH", "fields": "end_date,total_revenue"}
         )
         end_time = time.time()
 

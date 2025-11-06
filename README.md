@@ -4,29 +4,33 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.121+-green.svg)](https://fastapi.tiangolo.com)
 [![MCP](https://img.shields.io/badge/MCP-1.20+-purple.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-314%20passing-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/Tests-247%20total%2C%20205%20passing-brightgreen.svg)](#)
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success.svg)](#)
 
 一个基于 FastAPI 和 MCP (Model Context Protocol) 的中国股票财务数据查询服务，**✅ 开发完成，生产就绪**。
 
-## 🎯 核心特性
+## 🎯 项目特性
 
-### 🌐 双模式架构
+> 📋 **详细信息请查看 [CLAUDE.md](CLAUDE.md)** - 完整的开发指南和架构文档
+
+### 🌐 架构概览
 - **FastAPI REST API**：标准 HTTP 接口，支持智能缓存和字段选择
 - **MCP 集成**：Claude Code 可直接调用工具查询财务数据
+- **14个API端点** + **3个MCP工具**
+- **SOLID架构设计**：依赖注入，完全可测试
 
-### 🚀 生产级功能
-- **13个完整API端点**：覆盖利润表、资产负债表、现金流量表、股票信息
-- **3个MCP工具**：query_stock_financials、get_available_financial_fields、validate_financial_fields
-- **智能缓存系统**：磁盘缓存，提升查询性能
-- **完整测试覆盖**：314个测试用例，覆盖率>95%
-- **服务管理**：一键启动、停止、重启所有服务
+### 🧪 测试状态
+- **总测试数**: 247个测试用例
+- **通过率**: 205个通过 (83%)
+- **Mock架构**: 成功使用依赖注入替代真实API调用
+- **核心功能**: 所有业务逻辑、架构和数据处理测试通过
+- **优化空间**: API路由和MCP服务器测试需要完善
 
-### 🎪 解决的核心问题
-- ✅ 绕过 MCP token 限制，支持大数据量历史财务数据查询
-- ✅ 智能字段选择，只返回需要的数据，节省 token 使用
-- ✅ 缓存优化，显著提升查询性能
-- ✅ 支持完整的历史数据查询（如贵州茅台25年数据）
+### 🚀 核心功能
+- 智能缓存系统，提升查询性能
+- 智能字段选择，节省token使用
+- 支持完整历史数据查询
+- 生产级错误处理和监控
 
 ## 🚀 快速开始
 

@@ -21,7 +21,14 @@ from ..common import (APIResponse, FieldsResponse, HealthResponse,
 router = APIRouter()
 
 # 依赖注入：获取CashFlowService实例
-get_cashflow_service = create_service_dependency(CashFlowService)
+def get_cashflow_service():
+    """获取CashFlowService实例，支持依赖注入和测试覆盖"""
+    from tushare_query_mcp.config import get_settings
+    return CashFlowService(get_settings().tushare_token)
+
+
+# 导出依赖项以支持测试
+__all__ = ["router", "get_cashflow_service"]
 
 
 @router.get("/data", response_model=APIResponse)

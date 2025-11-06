@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from ..schemas.request import IncomeDataSourceRequest, IncomeRequest
 from ..schemas.response import (IncomeResponse, ResponseStatus,
                                 create_income_response)
+from ..interfaces.core import IDataSource
 from ..utils.data_filter import filter_by_update_flag
 from ..utils.field_selector import FieldSelector
 from .base_service import BaseFinancialService
@@ -22,14 +23,22 @@ logger = logging.getLogger(__name__)
 class IncomeService(BaseFinancialService):
     """利润表服务"""
 
-    def __init__(self, tushare_token: str):
+    def __init__(self, data_source_or_token):
         """
-        初始化利润表服务
+        初始化利润表服务 - 支持依赖注入和向后兼容
 
         Args:
-            tushare_token: Tushare API token
+            data_source_or_token: 数据源接口实现或token字符串（向后兼容）
         """
-        super().__init__(tushare_token, "利润表")
+        # 检查是否是token字符串（向后兼容）
+        if isinstance(data_source_or_token, str):
+            # 向后兼容：自动创建TushareDataSource
+            data_source = TushareDataSource(data_source_or_token)
+        else:
+            # 新方式：使用注入的数据源
+            data_source = data_source_or_token
+
+        super().__init__(data_source, "利润表")
 
     async def get_income_data(self, request: IncomeRequest) -> IncomeResponse:
         """
@@ -55,7 +64,7 @@ class IncomeService(BaseFinancialService):
         Returns:
             原始数据列表
         """
-        return await self.tushare_source.get_income_data(request)
+        return await self.data_source.get_income_data(request)
 
     def _create_response(
         self, data: List[Dict[str, Any]], message: str = "", **kwargs
@@ -100,6 +109,24 @@ class IncomeService(BaseFinancialService):
             ts_code=request.ts_code,
             start_date=request.start_date,
             end_date=request.end_date,
+        )
+
+    def _create_data_source_request_by_dates(
+        self, ts_code: str, start_date: Optional[str], end_date: Optional[str]
+    ) -> IncomeDataSourceRequest:
+        """
+        根据日期创建利润表数据源请求
+
+        Args:
+            ts_code: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            数据源请求
+        """
+        return IncomeDataSourceRequest(
+            ts_code=ts_code, start_date=start_date, end_date=end_date
         )
 
     def _create_data_source_request_by_dates(

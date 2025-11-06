@@ -205,15 +205,45 @@ def create_service_dependency(service_class: Type[T]):
 # 通用API响应转换函数
 def create_api_response(service_response) -> APIResponse:
     """将Service响应转换为API响应"""
-    return APIResponse(
-        status=service_response.status.value,
-        data=service_response.data,
-        total_records=service_response.total_records,
-        message=service_response.message,
-        from_cache=service_response.from_cache,
-        query_time=service_response.query_time,
-        error=service_response.error,
-    )
+    # 支持字典和对象两种格式
+    if isinstance(service_response, dict):
+        # 字典格式
+        status = service_response.get('status', 'success')
+        if hasattr(status, 'value'):
+            status = status.value
+        elif isinstance(status, str):
+            status = status
+        else:
+            status = str(status)
+
+        return APIResponse(
+            status=status,
+            data=service_response.get('data', []),
+            total_records=service_response.get('total_records', 0),
+            message=service_response.get('message', '查询成功'),
+            from_cache=service_response.get('from_cache', False),
+            query_time=service_response.get('query_time', 0.0),
+            error=service_response.get('error'),
+        )
+    else:
+        # 对象格式
+        status = service_response.status
+        if hasattr(status, 'value'):
+            status = status.value
+        elif isinstance(status, str):
+            status = status
+        else:
+            status = str(status)
+
+        return APIResponse(
+            status=status,
+            data=service_response.data,
+            total_records=service_response.total_records,
+            message=service_response.message,
+            from_cache=service_response.from_cache,
+            query_time=service_response.query_time,
+            error=service_response.error,
+        )
 
 
 def create_health_response(health_status: dict) -> HealthResponse:

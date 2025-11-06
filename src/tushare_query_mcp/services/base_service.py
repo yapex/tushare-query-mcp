@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from ..schemas.request import DataSourceRequest, FinancialDataRequest
 from ..schemas.response import (FinancialDataResponse, ResponseStatus,
                                 create_error_response)
+from ..interfaces.core import IDataSource
 from ..utils.data_filter import filter_by_update_flag
 from ..utils.field_selector import FieldSelector
 from .tushare_datasource import TushareDataSource
@@ -24,15 +25,15 @@ logger = logging.getLogger(__name__)
 class BaseFinancialService(ABC):
     """财务数据服务基础类"""
 
-    def __init__(self, tushare_token: str, service_name: str):
+    def __init__(self, data_source: IDataSource, service_name: str):
         """
-        初始化财务数据服务
+        初始化财务数据服务 - 使用依赖注入
 
         Args:
-            tushare_token: Tushare API token
+            data_source: 数据源接口实现
             service_name: 服务名称
         """
-        self.tushare_source = TushareDataSource(tushare_token)
+        self.data_source = data_source  # ✅ 依赖注入
         self.service_name = service_name
 
     @abstractmethod
@@ -293,7 +294,7 @@ class BaseFinancialService(ABC):
         """
         try:
             # 检查Tushare数据源（DataSource层会检查自己的缓存）
-            data_source_health = await self.tushare_source.health_check()
+            data_source_health = await self.data_source.health_check()
 
             health_status = {
                 "status": (

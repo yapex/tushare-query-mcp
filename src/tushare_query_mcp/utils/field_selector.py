@@ -37,11 +37,15 @@ class FieldSelector:
 
         # 如果没有指定字段，返回所有字段
         if not fields:
-            # 如果是DataFrame，先转换为字典列表
+            # 处理DataFrame类型
             if hasattr(data, "to_dict"):
                 return data.to_dict("records")
-            # 返回所有记录的所有字段
-            return data.copy()
+            # 处理列表类型
+            elif hasattr(data, "__len__") and len(data) > 0:
+                return data  # 返回原始数据，包含所有字段
+            # 其他类型返回空列表
+            else:
+                return []
 
         # 去重字段列表，保持顺序
         seen_fields = set()

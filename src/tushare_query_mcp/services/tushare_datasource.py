@@ -16,6 +16,7 @@ except ImportError:
 
 from ..schemas.request import (BalanceDataSourceRequest,
                                CashFlowDataSourceRequest,
+                               FinancialDataRequest,
                                IncomeDataSourceRequest, StockDataSourceRequest)
 
 # 配置日志
@@ -74,13 +75,13 @@ class TushareDataSource:
         return params
 
     async def get_income_data(
-        self, request: IncomeDataSourceRequest
+        self, request: FinancialDataRequest
     ) -> List[Dict[str, Any]]:
         """
         获取利润表数据
 
         Args:
-            request: 利润表数据源请求
+            request: 财务数据请求对象
 
         Returns:
             利润表数据列表（包含所有字段）
@@ -88,7 +89,13 @@ class TushareDataSource:
         logger.info(f"获取利润表数据: {request.ts_code}")
 
         try:
-            params = self._build_api_parameters(request)
+            # 转换为内部请求类型
+            internal_request = IncomeDataSourceRequest(
+                ts_code=request.ts_code,
+                start_date=request.start_date,
+                end_date=request.end_date
+            )
+            params = self._build_api_parameters(internal_request)
 
             # 在异步上下文中调用同步API
             loop = asyncio.get_event_loop()
@@ -112,13 +119,13 @@ class TushareDataSource:
             raise
 
     async def get_balance_data(
-        self, request: BalanceDataSourceRequest
+        self, request: FinancialDataRequest
     ) -> List[Dict[str, Any]]:
         """
         获取资产负债表数据
 
         Args:
-            request: 资产负债表数据源请求
+            request: 财务数据请求对象
 
         Returns:
             资产负债表数据列表（包含所有字段）
@@ -126,7 +133,13 @@ class TushareDataSource:
         logger.info(f"获取资产负债表数据: {request.ts_code}")
 
         try:
-            params = self._build_api_parameters(request)
+            # 转换为内部请求类型
+            internal_request = BalanceDataSourceRequest(
+                ts_code=request.ts_code,
+                start_date=request.start_date,
+                end_date=request.end_date
+            )
+            params = self._build_api_parameters(internal_request)
 
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(
@@ -151,13 +164,13 @@ class TushareDataSource:
             raise
 
     async def get_cashflow_data(
-        self, request: CashFlowDataSourceRequest
+        self, request: FinancialDataRequest
     ) -> List[Dict[str, Any]]:
         """
         获取现金流量表数据
 
         Args:
-            request: 现金流量表数据源请求
+            request: 财务数据请求对象
 
         Returns:
             现金流量表数据列表（包含所有字段）
@@ -165,7 +178,13 @@ class TushareDataSource:
         logger.info(f"获取现金流量表数据: {request.ts_code}")
 
         try:
-            params = self._build_api_parameters(request)
+            # 转换为内部请求类型
+            internal_request = CashFlowDataSourceRequest(
+                ts_code=request.ts_code,
+                start_date=request.start_date,
+                end_date=request.end_date
+            )
+            params = self._build_api_parameters(internal_request)
 
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(None, lambda: self.pro.cashflow(**params))
@@ -286,12 +305,41 @@ class TushareDataSource:
             logger.error(f"获取财务数据失败 {ts_code}: {e}")
             raise
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> bool:
         """
         健康检查，测试API连接是否正常
 
         Returns:
-            健康检查结果
+            bool: 数据源是否健康
+        """
+        try:
+            # 尝试调用一个简单的API来测试连接
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: self.pro.trade_cal(
+                    exchange="SSE", start_date="20240101", end_date="20240101"
+                ),
+            )
+
+            is_healthy = len(result) > 0 if hasattr(result, '__len__') else False
+            if is_healthy:
+                logger.info("健康检查通过：Tushare API连接正常")
+            else:
+                logger.warning("健康检查失败：API返回空结果")
+
+            return is_healthy
+
+        except Exception as e:
+            logger.error(f"健康检查失败: {e}")
+            return False
+
+    async def detailed_health_check(self) -> Dict[str, Any]:
+        """
+        详细健康检查，返回详细信息（用于调试）
+
+        Returns:
+            健康检查详细结果
         """
         try:
             # 尝试调用一个简单的API来测试连接
@@ -307,7 +355,7 @@ class TushareDataSource:
                 "status": "healthy",
                 "message": "Tushare API连接正常",
                 "token_length": len(self.token),
-                "test_api_result": len(result) if result else 0,
+                "test_api_result": len(result) if hasattr(result, '__len__') else 0,
             }
 
         except Exception as e:
@@ -320,22 +368,7 @@ class TushareDataSource:
             }
 
 
-# 便捷函数
-async def create_tushare_datasource(token: str) -> TushareDataSource:
-    """
-    创建TushareDataSource实例的便捷函数
-
-    Args:
-        token: Tushare API token
-
-    Returns:
-        TushareDataSource实例
-    """
-    return TushareDataSource(token)
-
-
 # 导出主要接口
 __all__ = [
     "TushareDataSource",
-    "create_tushare_datasource",
 ]

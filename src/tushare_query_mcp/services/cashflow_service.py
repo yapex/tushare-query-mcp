@@ -10,7 +10,9 @@ from typing import Any, Dict, List, Optional
 from ..schemas.request import CashFlowDataSourceRequest, CashFlowRequest
 from ..schemas.response import (CashFlowResponse, ResponseStatus,
                                 create_cashflow_response)
+from ..interfaces.core import IDataSource
 from .base_service import BaseFinancialService
+from .tushare_datasource import TushareDataSource
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -19,14 +21,22 @@ logger = logging.getLogger(__name__)
 class CashFlowService(BaseFinancialService):
     """现金流量表服务"""
 
-    def __init__(self, tushare_token: str):
+    def __init__(self, data_source_or_token):
         """
-        初始化现金流量表服务
+        初始化现金流量表服务 - 支持依赖注入和向后兼容
 
         Args:
-            tushare_token: Tushare API token
+            data_source_or_token: 数据源接口实现或token字符串（向后兼容）
         """
-        super().__init__(tushare_token, "现金流量表")
+        # 检查是否是token字符串（向后兼容）
+        if isinstance(data_source_or_token, str):
+            # 向后兼容：自动创建TushareDataSource
+            data_source = TushareDataSource(data_source_or_token)
+        else:
+            # 新方式：使用注入的数据源
+            data_source = data_source_or_token
+
+        super().__init__(data_source, "现金流量表")
 
     async def get_cashflow_data(self, request: CashFlowRequest) -> CashFlowResponse:
         """
@@ -52,7 +62,7 @@ class CashFlowService(BaseFinancialService):
         Returns:
             原始数据列表
         """
-        return await self.tushare_source.get_cashflow_data(request)
+        return await self.data_source.get_cashflow_data(request)
 
     def _create_response(
         self, data: List[Dict[str, Any]], message: str = "", **kwargs

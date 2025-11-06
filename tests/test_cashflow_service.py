@@ -36,14 +36,11 @@ class TestCashFlowService:
         return mock_source
 
     @pytest.fixture
-    def cashflow_service(self, mock_config, mock_tushare_source):
-        """创建CashFlowService实例"""
-        with patch(
-            "tushare_query_mcp.services.base_service.TushareDataSource"
-        ) as mock_datasource_class:
-            mock_datasource_class.return_value = mock_tushare_source
-            service = CashFlowService(mock_config["tushare_token"])
-            return service
+    def cashflow_service(self, mock_tushare_source):
+        """创建CashFlowService实例 - 使用依赖注入"""
+        # 直接注入mock数据源，避免使用patch
+        service = CashFlowService(mock_tushare_source)
+        return service
 
     @pytest.fixture
     def sample_raw_data(self):
@@ -104,12 +101,12 @@ class TestCashFlowService:
     def test_service_initialization(self, mock_config):
         """测试服务初始化"""
         with patch(
-            "tushare_query_mcp.services.base_service.TushareDataSource"
+            "tushare_query_mcp.services.cashflow_service.TushareDataSource"
         ) as mock_datasource_class:
             service = CashFlowService(mock_config["tushare_token"])
 
             mock_datasource_class.assert_called_once_with(mock_config["tushare_token"])
-            assert service.tushare_source is not None
+            assert service.data_source is not None
             assert service.service_name == "现金流量表"
 
     @pytest.mark.asyncio
@@ -133,7 +130,7 @@ class TestCashFlowService:
             },
         ]
 
-        mock_tushare_source.get_income_data.return_value = raw_data_with_duplicates
+        mock_tushare_source.get_cashflow_data.return_value = raw_data_with_duplicates
 
         # 创建包含update_flag字段的请求
         request = CashFlowRequest(
@@ -152,7 +149,7 @@ class TestCashFlowService:
         self, cashflow_service, mock_tushare_source, sample_raw_data, sample_request
     ):
         """测试字段选择功能"""
-        mock_tushare_source.get_income_data.return_value = sample_raw_data
+        mock_tushare_source.get_cashflow_data.return_value = sample_raw_data
 
         # 请求特定字段
         response = await cashflow_service.get_cashflow_data(sample_request)
@@ -171,7 +168,7 @@ class TestCashFlowService:
         self, cashflow_service, mock_tushare_source, sample_raw_data
     ):
         """测试不提供日期范围"""
-        mock_tushare_source.get_income_data.return_value = sample_raw_data
+        mock_tushare_source.get_cashflow_data.return_value = sample_raw_data
 
         request = CashFlowRequest(
             ts_code="600519.SH",
@@ -190,7 +187,7 @@ class TestCashFlowService:
         self, cashflow_service, mock_tushare_source, sample_raw_data
     ):
         """测试空字段列表"""
-        mock_tushare_source.get_income_data.return_value = sample_raw_data
+        mock_tushare_source.get_cashflow_data.return_value = sample_raw_data
 
         request = CashFlowRequest(ts_code="600519.SH", fields=[])  # 空字段列表
 
@@ -206,7 +203,7 @@ class TestCashFlowService:
         self, cashflow_service, mock_tushare_source, sample_raw_data
     ):
         """测试无效字段"""
-        mock_tushare_source.get_income_data.return_value = sample_raw_data
+        mock_tushare_source.get_cashflow_data.return_value = sample_raw_data
 
         request = CashFlowRequest(
             ts_code="600519.SH",
@@ -247,7 +244,7 @@ class TestCashFlowService:
         self, cashflow_service, mock_tushare_source, sample_request
     ):
         """测试Tushare API异常"""
-        mock_tushare_source.get_income_data.side_effect = Exception("API调用失败")
+        mock_tushare_source.get_cashflow_data.side_effect = Exception("API调用失败")
 
         response = await cashflow_service.get_cashflow_data(sample_request)
 
@@ -262,7 +259,7 @@ class TestCashFlowService:
         self, cashflow_service, mock_tushare_source, sample_raw_data
     ):
         """测试并发请求"""
-        mock_tushare_source.get_income_data.return_value = sample_raw_data
+        mock_tushare_source.get_cashflow_data.return_value = sample_raw_data
 
         # 创建多个并发请求
         request1 = CashFlowRequest(
@@ -284,14 +281,14 @@ class TestCashFlowService:
             assert len(response.data) == 2
 
         # 验证数据源被调用两次
-        assert mock_tushare_source.get_income_data.call_count == 2
+        assert mock_tushare_source.get_cashflow_data.call_count == 2
 
     @pytest.mark.asyncio
     async def test_get_cashflow_data_with_report_type(
         self, cashflow_service, mock_tushare_source, sample_raw_data
     ):
         """测试报告类型过滤"""
-        mock_tushare_source.get_income_data.return_value = sample_raw_data
+        mock_tushare_source.get_cashflow_data.return_value = sample_raw_data
 
         # 创建包含报告类型的请求
         request = CashFlowRequest(
@@ -353,7 +350,7 @@ class TestCashFlowServiceEdgeCases(TestCashFlowService):
             {"ts_code": "600519.SH", "end_date": "20240630"},  # 缺少关键字段
         ]
 
-        mock_tushare_source.get_income_data.return_value = malformed_data
+        mock_tushare_source.get_cashflow_data.return_value = malformed_data
 
         response = await cashflow_service.get_cashflow_data(sample_request)
 

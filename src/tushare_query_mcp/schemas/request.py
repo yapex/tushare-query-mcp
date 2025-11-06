@@ -43,10 +43,16 @@ class FinancialDataRequest(BaseModel):
         if not v:
             return []  # 允许空字段列表
 
-        # 去重并过滤空字段
-        unique_fields = list(set(field.strip() for field in v if field.strip()))
+        # 过滤空字段并保持顺序，只去除重复的连续字段
+        cleaned_fields = []
+        seen = set()
+        for field in v:
+            field = field.strip()
+            if field and field not in seen:
+                cleaned_fields.append(field)
+                seen.add(field)
 
-        return unique_fields  # 可能为空列表
+        return cleaned_fields  # 可能为空列表
 
     @validator("start_date", "end_date")
     def validate_date_format(cls, v):

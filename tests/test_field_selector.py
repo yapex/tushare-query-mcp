@@ -169,10 +169,10 @@ class TestFieldSelector:
         """测试空字段列表"""
         result = FieldSelector.select_fields(sample_income_data, [])
 
-        # 应该返回空字典的记录
+        # 应该返回所有字段的记录（空fields表示返回所有字段）
         assert len(result) == 2
-        for record in result:
-            assert record == {}
+        # 验证返回的数据与原始数据相同
+        assert result == sample_income_data  # 应该返回原始数据的所有字段
 
     def test_select_fields_empty_data(self):
         """测试空数据"""

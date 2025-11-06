@@ -88,7 +88,7 @@ class AsyncDiskCache:
 
         logger.info(f"缓存管理器初始化完成，缓存目录: {self.cache_dir}")
 
-    def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Optional[Any]:
         """
         获取缓存数据
 
@@ -106,7 +106,7 @@ class AsyncDiskCache:
             # 检查是否过期
             if self._is_expired(cache_data):
                 logger.debug(f"缓存已过期: {key}")
-                self.delete(key)
+                await self.delete(key)
                 return None
 
             logger.debug(f"缓存命中: {key}")
@@ -116,7 +116,7 @@ class AsyncDiskCache:
             logger.error(f"获取缓存失败 {key}: {e}")
             return None
 
-    def set(self, key: str, data: Any, ttl: int = 3600) -> bool:
+    async def set(self, key: str, data: Any, ttl: int = 3600) -> bool:
         """
         设置缓存数据
 
@@ -140,7 +140,7 @@ class AsyncDiskCache:
             logger.error(f"设置缓存失败 {key}: {e}")
             return False
 
-    def delete(self, key: str) -> bool:
+    async def delete(self, key: str) -> bool:
         """
         删除缓存数据
 
@@ -162,7 +162,7 @@ class AsyncDiskCache:
             logger.error(f"删除缓存失败 {key}: {e}")
             return False
 
-    def clear(self) -> bool:
+    async def clear(self) -> bool:
         """
         清空所有缓存
 
@@ -255,7 +255,7 @@ class AsyncDiskCache:
                     cache_key = f"{key_prefix}:{cache_key}"
 
                 # 尝试从缓存获取
-                cached_result = self.get(cache_key)
+                cached_result = await self.get(cache_key)
                 if cached_result is not None:
                     return cached_result
 
@@ -263,7 +263,7 @@ class AsyncDiskCache:
                 result = await func(*args, **kwargs)
 
                 # 存入缓存
-                self.set(cache_key, result, ttl=expire)
+                await self.set(cache_key, result, ttl=expire)
                 return result
 
             return async_wrapper
@@ -281,6 +281,58 @@ class AsyncDiskCache:
             装饰器函数
         """
         return memoize(self.cache, expire=expire)
+
+    async def exists(self, key: str) -> bool:
+        """
+        检查缓存是否存在
+
+        Args:
+            key: 缓存键
+
+        Returns:
+            bool: 缓存是否存在
+        """
+        try:
+            cache_data = self.cache.get(key)
+            if cache_data is None:
+                return False
+
+            # 检查是否过期
+            if self._is_expired(cache_data):
+                self.delete(key)
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"检查缓存存在性失败 {key}: {e}")
+            return False
+
+    async def get_stats(self) -> Dict[str, Any]:
+        """
+        获取缓存统计信息
+
+        Returns:
+            Dict[str, Any]: 缓存统计信息
+        """
+        try:
+            return {
+                "cache_dir": str(self.cache_dir),
+                "cache_size": len(self.cache),
+                "volume": self.cache.volume(),
+                "size_limit": self.cache.size_limit,
+                "eviction_policy": getattr(self.cache, 'eviction_policy', 'unknown'),
+            }
+        except Exception as e:
+            logger.error(f"获取缓存统计信息失败: {e}")
+            return {
+                "cache_dir": str(self.cache_dir),
+                "cache_size": 0,
+                "volume": 0,
+                "size_limit": 0,
+                "eviction_policy": "unknown",
+                "error": str(e)
+            }
 
     def __enter__(self):
         """上下文管理器入口"""

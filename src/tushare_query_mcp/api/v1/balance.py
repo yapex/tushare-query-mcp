@@ -20,8 +20,15 @@ from ..common import (APIResponse, FieldsResponse, HealthResponse,
 # 创建路由器
 router = APIRouter()
 
+
+# 导出依赖项以支持测试
+__all__ = ["router", "get_balance_service"]
+
 # 依赖注入：获取BalanceService实例
-get_balance_service = create_service_dependency(BalanceService)
+def get_balance_service():
+    """获取BalanceService实例，支持依赖注入和测试覆盖"""
+    from tushare_query_mcp.config import get_settings
+    return BalanceService(get_settings().tushare_token)
 
 
 @router.get("/data", response_model=APIResponse)

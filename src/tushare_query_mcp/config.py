@@ -77,102 +77,26 @@ class Settings(BaseSettings):
         os.makedirs(v, exist_ok=True)
         return v.strip()
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "case_sensitive": False,
-        "extra": "ignore",
-        # 环境变量前缀
-        "env_prefix": "",
-        # 字段别名（环境变量名）使用 Pydantic v2 的 Field alias
-    }
-
-    @field_validator("tushare_token", mode="before")
+    @field_validator("cache_dir")
     @classmethod
-    def get_tushare_token(cls, v, info):
-        """从环境变量获取 TUSHARE_TOKEN"""
-        return v or os.getenv("TUSHARE_TOKEN")
-
-    @field_validator("api_host", mode="before")
-    @classmethod
-    def get_api_host(cls, v, info):
-        """从环境变量获取 API_HOST"""
-        return v or os.getenv("API_HOST", "0.0.0.0")
-
-    @field_validator("api_port", mode="before")
-    @classmethod
-    def get_api_port(cls, v, info):
-        """从环境变量获取 API_PORT"""
+    def validate_cache_dir(cls, v):
+        """验证缓存目录"""
         if v is None:
-            port = os.getenv("API_PORT", "8000")
-            return int(port)
-        return v
+            v = "./.cache"
+        if not v.strip():
+            raise ValueError("cache_dir cannot be empty")
+        # 确保目录路径存在
+        os.makedirs(v, exist_ok=True)
+        return v.strip()
 
-    @field_validator("cache_dir", mode="before")
-    @classmethod
-    def get_cache_dir(cls, v, info):
-        """从环境变量获取 CACHE_DIR"""
-        return v or os.getenv("CACHE_DIR", "./.cache")
+    class Config:
+        """Pydantic v2 model_config"""
 
-    @field_validator("income_cache_ttl", mode="before")
-    @classmethod
-    def get_income_cache_ttl(cls, v, info):
-        """从环境变量获取 INCOME_CACHE_TTL"""
-        if v is None:
-            ttl = os.getenv("INCOME_CACHE_TTL", "604800")  # 7天
-            return int(ttl)
-        return v
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+        extra = "ignore"
 
-    @field_validator("balance_cache_ttl", mode="before")
-    @classmethod
-    def get_balance_cache_ttl(cls, v, info):
-        """从环境变量获取 BALANCE_CACHE_TTL"""
-        if v is None:
-            ttl = os.getenv("BALANCE_CACHE_TTL", "604800")  # 7天
-            return int(ttl)
-        return v
-
-    @field_validator("cashflow_cache_ttl", mode="before")
-    @classmethod
-    def get_cashflow_cache_ttl(cls, v, info):
-        """从环境变量获取 CASHFLOW_CACHE_TTL"""
-        if v is None:
-            ttl = os.getenv("CASHFLOW_CACHE_TTL", "604800")  # 7天
-            return int(ttl)
-        return v
-
-    @field_validator("stock_cache_ttl", mode="before")
-    @classmethod
-    def get_stock_cache_ttl(cls, v, info):
-        """从环境变量获取 STOCK_CACHE_TTL"""
-        if v is None:
-            ttl = os.getenv("STOCK_CACHE_TTL", "2592000")  # 30天
-            return int(ttl)
-        return v
-
-    @field_validator("api_timeout", mode="before")
-    @classmethod
-    def get_api_timeout(cls, v, info):
-        """从环境变量获取 API_TIMEOUT"""
-        if v is None:
-            timeout = os.getenv("API_TIMEOUT", "30")
-            return int(timeout)
-        return v
-
-    @field_validator("max_retries", mode="before")
-    @classmethod
-    def get_max_retries(cls, v, info):
-        """从环境变量获取 MAX_RETRIES"""
-        if v is None:
-            retries = os.getenv("MAX_RETRIES", "3")
-            return int(retries)
-        return v
-
-    @field_validator("log_level", mode="before")
-    @classmethod
-    def get_log_level(cls, v, info):
-        """从环境变量获取 LOG_LEVEL"""
-        return v or os.getenv("LOG_LEVEL", "INFO")
 
 
 # 全局配置实例

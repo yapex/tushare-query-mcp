@@ -26,24 +26,18 @@ class TestServiceDataFrameHandling:
 
     @pytest.fixture
     def income_service(self, mock_tushare_source):
-        """创建IncomeService实例"""
-        service = IncomeService("test_token")
-        service.tushare_source = mock_tushare_source
-        return service
+        """创建IncomeService实例 - 使用依赖注入"""
+        return IncomeService(mock_tushare_source)
 
     @pytest.fixture
     def balance_service(self, mock_tushare_source):
-        """创建BalanceService实例"""
-        service = BalanceService("test_token")
-        service.tushare_source = mock_tushare_source
-        return service
+        """创建BalanceService实例 - 使用依赖注入"""
+        return BalanceService(mock_tushare_source)
 
     @pytest.fixture
     def cashflow_service(self, mock_tushare_source):
-        """创建CashFlowService实例"""
-        service = CashFlowService("test_token")
-        service.tushare_source = mock_tushare_source
-        return service
+        """创建CashFlowService实例 - 使用依赖注入"""
+        return CashFlowService(mock_tushare_source)
 
     @pytest.mark.asyncio
     async def test_income_service_handles_empty_dataframe(
