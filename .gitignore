@@ -9,3 +9,26 @@ wheels/
 # Virtual environments
 .venv
 .claude/*
+
+# macOS system files
+.DS_Store
+
+# Cache directories
+.cache/
+test_cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
