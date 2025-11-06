@@ -16,6 +16,7 @@ wheels/
 # Cache directories
 .cache/
 test_cache/
+test_cache_dir/
 
 # IDE and editor files
 .vscode/
@@ -32,3 +33,11 @@ logs/
 .env
 .env.local
 .env.*.local
+
+# Analysis and temporary files
+moutai_*.py
+moutai_*.json
+moutai_*.png
+analyze_*.py
+package-lock.json
+QWEN.md
