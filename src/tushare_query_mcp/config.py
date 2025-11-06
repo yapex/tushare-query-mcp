@@ -98,7 +98,6 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
-
 # 全局配置实例
 _settings: Optional[Settings] = None
 

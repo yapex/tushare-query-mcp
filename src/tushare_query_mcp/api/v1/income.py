@@ -24,10 +24,12 @@ router = APIRouter()
 # 导出依赖项以支持测试
 __all__ = ["router", "get_income_service"]
 
+
 # 依赖注入：获取IncomeService实例
 def get_income_service():
     """获取IncomeService实例，支持依赖注入和测试覆盖"""
     from tushare_query_mcp.config import get_settings
+
     settings = get_settings()
     return IncomeService(settings.tushare_token)
 

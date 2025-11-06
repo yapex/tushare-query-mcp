@@ -7,10 +7,10 @@
 import logging
 from typing import Any, Dict, List, Optional
 
+from ..interfaces.core import IDataSource
 from ..schemas.request import CashFlowDataSourceRequest, CashFlowRequest
 from ..schemas.response import (CashFlowResponse, ResponseStatus,
                                 create_cashflow_response)
-from ..interfaces.core import IDataSource
 from .base_service import BaseFinancialService
 from .tushare_datasource import TushareDataSource
 

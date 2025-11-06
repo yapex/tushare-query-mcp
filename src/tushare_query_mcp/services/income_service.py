@@ -7,10 +7,11 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from ..schemas.request import IncomeDataSourceRequest, IncomeRequest
+from ..interfaces.core import IDataSource
+from ..schemas.request import (FinancialDataRequest, IncomeDataSourceRequest,
+                               IncomeRequest)
 from ..schemas.response import (IncomeResponse, ResponseStatus,
                                 create_income_response)
-from ..interfaces.core import IDataSource
 from ..utils.data_filter import filter_by_update_flag
 from ..utils.field_selector import FieldSelector
 from .base_service import BaseFinancialService
@@ -51,6 +52,57 @@ class IncomeService(BaseFinancialService):
             利润表响应
         """
         return await self.get_data(request)
+
+    async def get_income_data_with_filtering(
+        self, request: FinancialDataRequest
+    ) -> IncomeResponse:
+        """
+        获取利润表数据（带本地过滤）
+
+        Args:
+            request: 财务数据请求
+
+        Returns:
+            利润表响应
+        """
+        import time
+
+        start_time = time.time()
+
+        try:
+            logger.info(f"获取利润表数据（本地过滤）: {request.ts_code}")
+
+            # 从数据源获取全量数据（DataSource层会处理缓存）
+            data_source_request = IncomeDataSourceRequest(ts_code=request.ts_code)
+            raw_data = await self._get_data_from_source(data_source_request)
+
+            # 本地过滤
+            filtered_data = self._filter_data(raw_data, request)
+
+            # 字段选择
+            selected_data = self._select_fields(filtered_data, request.fields)
+
+            query_time = time.time() - start_time
+            logger.info(
+                f"利润表数据过滤完成: {len(selected_data)} 条记录，耗时 {query_time:.3f}秒"
+            )
+
+            return self._create_response(
+                data=selected_data,
+                message="利润表查询成功",
+                from_cache=False,  # DataSource层已处理缓存
+                query_time=query_time,
+            )
+
+        except Exception as e:
+            query_time = time.time() - start_time
+            logger.error(f"获取利润表数据失败 {request.ts_code}: {e}")
+
+            return create_income_response(
+                message=f"获取利润表数据失败: {str(e)}",
+                error_code=self._get_error_code(),
+                query_time=query_time,
+            )
 
     async def _get_data_from_source(
         self, request: IncomeDataSourceRequest

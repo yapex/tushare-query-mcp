@@ -321,7 +321,7 @@ class AsyncDiskCache:
                 "cache_size": len(self.cache),
                 "volume": self.cache.volume(),
                 "size_limit": self.cache.size_limit,
-                "eviction_policy": getattr(self.cache, 'eviction_policy', 'unknown'),
+                "eviction_policy": getattr(self.cache, "eviction_policy", "unknown"),
             }
         except Exception as e:
             logger.error(f"获取缓存统计信息失败: {e}")
@@ -331,7 +331,7 @@ class AsyncDiskCache:
                 "volume": 0,
                 "size_limit": 0,
                 "eviction_policy": "unknown",
-                "error": str(e)
+                "error": str(e),
             }
 
     def __enter__(self):

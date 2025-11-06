@@ -1,10 +1,13 @@
 """
 测试依赖注入重构
 """
-import pytest
+
 from unittest.mock import Mock
+
+import pytest
+
+from tushare_query_mcp.interfaces.core import ICache, IDataSource
 from tushare_query_mcp.services.income_service import IncomeService
-from tushare_query_mcp.interfaces.core import IDataSource, ICache
 
 
 class TestDependencyInjection:
@@ -18,21 +21,26 @@ class TestDependencyInjection:
         service = IncomeService("test_token")
 
         # ✅ 但现在使用的是构造函数注入！
-        assert hasattr(service, 'data_source')
+        assert hasattr(service, "data_source")
         # ✅ 依赖是注入的，不是硬编码创建的
-        from tushare_query_mcp.services.tushare_datasource import TushareDataSource
+        from tushare_query_mcp.services.tushare_datasource import \
+            TushareDataSource
+
         assert isinstance(service.data_source, TushareDataSource)
 
         # ✅ 更重要的是，现在可以使用依赖注入
         from unittest.mock import Mock
+
         from tushare_query_mcp.interfaces.core import IDataSource
+
         mock_data_source = Mock(spec=IDataSource)
         service_with_di = IncomeService(mock_data_source)  # 位置参数
         assert service_with_di.data_source is mock_data_source
 
     def test_service_should_accept_dependencies(self):
         """测试：服务应该通过构造函数接受依赖"""
-        from tushare_query_mcp.services.tushare_datasource import TushareDataSource
+        from tushare_query_mcp.services.tushare_datasource import \
+            TushareDataSource
         from tushare_query_mcp.utils.cache import AsyncDiskCache
 
         # 期望的重构后接口
@@ -65,6 +73,7 @@ class TestDependencyInjection:
 
         # 验证可以调用mock方法
         import asyncio
+
         result = asyncio.run(service._get_data_from_source(Mock()))
         mock_data_source.get_income_data.assert_called_once()
 
@@ -74,7 +83,9 @@ class TestDependencyInjection:
 
         # 使用字符串token自动创建TushareDataSource（向后兼容）
         service = IncomeService("test_token")  # 字符串参数
-        assert hasattr(service, 'data_source')
+        assert hasattr(service, "data_source")
         assert service.data_source is not None
-        from tushare_query_mcp.services.tushare_datasource import TushareDataSource
+        from tushare_query_mcp.services.tushare_datasource import \
+            TushareDataSource
+
         assert isinstance(service.data_source, TushareDataSource)

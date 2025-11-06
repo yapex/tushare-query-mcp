@@ -20,10 +20,12 @@ from ..common import (APIResponse, FieldsResponse, HealthResponse,
 # 创建路由器
 router = APIRouter()
 
+
 # 依赖注入：获取CashFlowService实例
 def get_cashflow_service():
     """获取CashFlowService实例，支持依赖注入和测试覆盖"""
     from tushare_query_mcp.config import get_settings
+
     return CashFlowService(get_settings().tushare_token)
 
 

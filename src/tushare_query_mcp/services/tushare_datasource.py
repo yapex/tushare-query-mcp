@@ -15,8 +15,7 @@ except ImportError:
     ts = None
 
 from ..schemas.request import (BalanceDataSourceRequest,
-                               CashFlowDataSourceRequest,
-                               FinancialDataRequest,
+                               CashFlowDataSourceRequest, FinancialDataRequest,
                                IncomeDataSourceRequest, StockDataSourceRequest)
 
 # 配置日志
@@ -26,12 +25,13 @@ logger = logging.getLogger(__name__)
 class TushareDataSource:
     """Tushare数据源"""
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, cache=None):
         """
         初始化Tushare数据源
 
         Args:
             token: Tushare API token
+            cache: 缓存实例（可选）
 
         Raises:
             ValueError: 当token为空时
@@ -44,6 +44,7 @@ class TushareDataSource:
             raise ValueError("Tushare token不能为空")
 
         self.token = token.strip()
+        self.cache = cache
 
         # 设置tushare token
         ts.set_token(self.token)
@@ -52,6 +53,20 @@ class TushareDataSource:
         self.pro = ts.pro_api()
 
         logger.info("Tushare数据源初始化完成")
+
+    @staticmethod
+    def _build_cache_key(data_type: str, ts_code: str) -> str:
+        """
+        构建缓存键
+
+        Args:
+            data_type: 数据类型 (income, balance, cashflow)
+            ts_code: 股票代码
+
+        Returns:
+            格式化的缓存键
+        """
+        return f"{data_type}:{ts_code}"
 
     def _build_api_parameters(self, request) -> Dict[str, Any]:
         """
@@ -78,7 +93,7 @@ class TushareDataSource:
         self, request: FinancialDataRequest
     ) -> List[Dict[str, Any]]:
         """
-        获取利润表数据
+        获取利润表数据（简化版本 - 总是获取全量数据）
 
         Args:
             request: 财务数据请求对象
@@ -89,13 +104,16 @@ class TushareDataSource:
         logger.info(f"获取利润表数据: {request.ts_code}")
 
         try:
-            # 转换为内部请求类型
-            internal_request = IncomeDataSourceRequest(
-                ts_code=request.ts_code,
-                start_date=request.start_date,
-                end_date=request.end_date
-            )
-            params = self._build_api_parameters(internal_request)
+            # 如果有缓存，先尝试从缓存获取
+            if self.cache:
+                cache_key = self._build_cache_key("income", request.ts_code)
+                cached_data = await self.cache.get(cache_key)
+                if cached_data:
+                    logger.info(f"从缓存获取利润表数据: {len(cached_data)} 条记录")
+                    return cached_data
+
+            # 获取全量数据，不设置日期限制
+            params = {"ts_code": request.ts_code}
 
             # 在异步上下文中调用同步API
             loop = asyncio.get_event_loop()
@@ -111,6 +129,11 @@ class TushareDataSource:
                     for record in data
                 ]
 
+            # 如果有缓存，保存数据
+            if self.cache:
+                cache_key = self._build_cache_key("income", request.ts_code)
+                await self.cache.set(cache_key, data, ttl=7 * 24 * 3600)  # 7天TTL
+
             logger.info(f"成功获取利润表数据: {len(data)} 条记录")
             return data
 
@@ -122,7 +145,7 @@ class TushareDataSource:
         self, request: FinancialDataRequest
     ) -> List[Dict[str, Any]]:
         """
-        获取资产负债表数据
+        获取资产负债表数据（简化版本 - 总是获取全量数据）
 
         Args:
             request: 财务数据请求对象
@@ -133,13 +156,16 @@ class TushareDataSource:
         logger.info(f"获取资产负债表数据: {request.ts_code}")
 
         try:
-            # 转换为内部请求类型
-            internal_request = BalanceDataSourceRequest(
-                ts_code=request.ts_code,
-                start_date=request.start_date,
-                end_date=request.end_date
-            )
-            params = self._build_api_parameters(internal_request)
+            # 如果有缓存，先尝试从缓存获取
+            if self.cache:
+                cache_key = self._build_cache_key("balance", request.ts_code)
+                cached_data = await self.cache.get(cache_key)
+                if cached_data:
+                    logger.info(f"从缓存获取资产负债表数据: {len(cached_data)} 条记录")
+                    return cached_data
+
+            # 获取全量数据，不设置日期限制
+            params = {"ts_code": request.ts_code}
 
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(
@@ -156,6 +182,11 @@ class TushareDataSource:
                     for record in data
                 ]
 
+            # 如果有缓存，保存数据
+            if self.cache:
+                cache_key = self._build_cache_key("balance", request.ts_code)
+                await self.cache.set(cache_key, data, ttl=7 * 24 * 3600)  # 7天TTL
+
             logger.info(f"成功获取资产负债表数据: {len(data)} 条记录")
             return data
 
@@ -167,7 +198,7 @@ class TushareDataSource:
         self, request: FinancialDataRequest
     ) -> List[Dict[str, Any]]:
         """
-        获取现金流量表数据
+        获取现金流量表数据（简化版本 - 总是获取全量数据）
 
         Args:
             request: 财务数据请求对象
@@ -178,13 +209,16 @@ class TushareDataSource:
         logger.info(f"获取现金流量表数据: {request.ts_code}")
 
         try:
-            # 转换为内部请求类型
-            internal_request = CashFlowDataSourceRequest(
-                ts_code=request.ts_code,
-                start_date=request.start_date,
-                end_date=request.end_date
-            )
-            params = self._build_api_parameters(internal_request)
+            # 如果有缓存，先尝试从缓存获取
+            if self.cache:
+                cache_key = self._build_cache_key("cashflow", request.ts_code)
+                cached_data = await self.cache.get(cache_key)
+                if cached_data:
+                    logger.info(f"从缓存获取现金流量表数据: {len(cached_data)} 条记录")
+                    return cached_data
+
+            # 获取全量数据，不设置日期限制
+            params = {"ts_code": request.ts_code}
 
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(None, lambda: self.pro.cashflow(**params))
@@ -198,6 +232,11 @@ class TushareDataSource:
                     dict(record) if hasattr(record, "to_dict") else record
                     for record in data
                 ]
+
+            # 如果有缓存，保存数据
+            if self.cache:
+                cache_key = self._build_cache_key("cashflow", request.ts_code)
+                await self.cache.set(cache_key, data, ttl=7 * 24 * 3600)  # 7天TTL
 
             logger.info(f"成功获取现金流量表数据: {len(data)} 条记录")
             return data
@@ -322,7 +361,7 @@ class TushareDataSource:
                 ),
             )
 
-            is_healthy = len(result) > 0 if hasattr(result, '__len__') else False
+            is_healthy = len(result) > 0 if hasattr(result, "__len__") else False
             if is_healthy:
                 logger.info("健康检查通过：Tushare API连接正常")
             else:
@@ -355,7 +394,7 @@ class TushareDataSource:
                 "status": "healthy",
                 "message": "Tushare API连接正常",
                 "token_length": len(self.token),
-                "test_api_result": len(result) if hasattr(result, '__len__') else 0,
+                "test_api_result": len(result) if hasattr(result, "__len__") else 0,
             }
 
         except Exception as e:

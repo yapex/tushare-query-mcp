@@ -10,10 +10,12 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
+from ..interfaces.core import IDataSource
 from ..schemas.request import DataSourceRequest, FinancialDataRequest
 from ..schemas.response import (FinancialDataResponse, ResponseStatus,
                                 create_error_response)
-from ..interfaces.core import IDataSource
 from ..utils.data_filter import filter_by_update_flag
 from ..utils.field_selector import FieldSelector
 from .tushare_datasource import TushareDataSource
@@ -356,6 +358,56 @@ class BaseFinancialService(ABC):
                 else "stable" if absolute_change == 0 else "declining"
             ),
         }
+
+    def _filter_data(
+        self, data: List[Dict[str, Any]], request: FinancialDataRequest
+    ) -> List[Dict[str, Any]]:
+        """
+        本地数据过滤 - 根据请求参数过滤数据
+
+        Args:
+            data: 原始数据列表
+            request: 财务数据请求
+
+        Returns:
+            过滤后的数据列表
+        """
+        if not data:
+            return []
+
+        # 转换为DataFrame进行过滤
+        df = pd.DataFrame(data)
+
+        # 日期范围过滤
+        if hasattr(request, "start_date") and request.start_date:
+            df = df[df["end_date"] >= request.start_date]
+
+        if hasattr(request, "end_date") and request.end_date:
+            df = df[df["end_date"] <= request.end_date]
+
+        # 转换回字典列表
+        return df.to_dict("records")
+
+    def _select_fields(
+        self, data: List[Dict[str, Any]], fields: Optional[List[str]]
+    ) -> List[Dict[str, Any]]:
+        """
+        字段选择 - 从数据中选择指定字段
+
+        Args:
+            data: 数据列表
+            fields: 要选择的字段列表
+
+        Returns:
+            选择字段后的数据列表
+        """
+        if not fields:
+            return data
+
+        if not data:
+            return data
+
+        return [{field: record.get(field) for field in fields} for record in data]
 
 
 # 导出主要接口

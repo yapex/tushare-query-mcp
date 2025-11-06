@@ -106,10 +106,8 @@ class TestTushareDataSource:
         # 调用方法
         result = await tushare_source.get_income_data(request)
 
-        # 验证调用
-        mock_tushare_pro.income.assert_called_once_with(
-            ts_code="600519.SH", start_date="20240101", end_date="20241231"
-        )
+        # 验证调用 - 新设计不再传递日期参数
+        mock_tushare_pro.income.assert_called_once_with(ts_code="600519.SH")
 
         # 验证结果
         assert result == mock_data

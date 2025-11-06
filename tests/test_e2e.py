@@ -216,7 +216,7 @@ class TestPerformanceE2E:
         start_time = time.time()
         response = test_client.get(
             "/api/v1/income/data",
-            params={"ts_code": "600519.SH", "fields": "end_date,total_revenue"}
+            params={"ts_code": "600519.SH", "fields": "end_date,total_revenue"},
         )
         end_time = time.time()
 

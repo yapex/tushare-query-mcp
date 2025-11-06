@@ -94,12 +94,8 @@ class BaseFinancialRoutes(Generic[T, RequestType]):
         self,
         ts_code: str = Query(..., description="股票代码（如：600519.SH）"),
         fields: str = Query(..., description="字段列表，逗号分隔"),
-        start_date: Optional[str] = Query(
-            None, description="开始日期，格式：YYYYMMDD"
-        ),
-        end_date: Optional[str] = Query(
-            None, description="结束日期，格式：YYYYMMDD"
-        ),
+        start_date: Optional[str] = Query(None, description="开始日期，格式：YYYYMMDD"),
+        end_date: Optional[str] = Query(None, description="结束日期，格式：YYYYMMDD"),
         service: T = Depends(self.get_service),
     ):
         """

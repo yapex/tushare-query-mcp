@@ -22,39 +22,43 @@ class TestIncomeRoutes:
     @pytest.fixture
     def mock_income_service(self):
         """模拟IncomeService"""
-        from tushare_query_mcp.schemas.response import IncomeResponse, ResponseStatus
+        from tushare_query_mcp.schemas.response import (IncomeResponse,
+                                                        ResponseStatus)
 
         mock_service = AsyncMock()
-        mock_service.get_income_data = AsyncMock(return_value=IncomeResponse(
-            status=ResponseStatus.SUCCESS,
-            data=[
-                {
-                    "end_date": "20240930",
-                    "total_revenue": 120714458386.98,
-                    "n_income_attr_p": 19223784414.08,
-                }
-            ],
-            total_records=1,
-            message="利润表查询成功",
-            from_cache=False,
-            query_time=0.123,
-            error=None,
-        ))
+        mock_service.get_income_data = AsyncMock(
+            return_value=IncomeResponse(
+                status=ResponseStatus.SUCCESS,
+                data=[
+                    {
+                        "end_date": "20240930",
+                        "total_revenue": 120714458386.98,
+                        "n_income_attr_p": 19223784414.08,
+                    }
+                ],
+                total_records=1,
+                message="利润表查询成功",
+                from_cache=False,
+                query_time=0.123,
+                error=None,
+            )
+        )
         return mock_service
 
     @pytest.fixture
     def client(self, mock_income_service):
         """创建测试客户端"""
         from fastapi import FastAPI
-        from tushare_query_mcp.api.v1.income import router, get_income_service
-        
+
+        from tushare_query_mcp.api.v1.income import get_income_service, router
+
         app = FastAPI()
         app.include_router(router, prefix="/api/v1/income", tags=["income"])
-        
+
         # Override the dependency with the mock service
         def override_get_income_service():
             return mock_income_service
-        
+
         app.dependency_overrides[get_income_service] = override_get_income_service
         return TestClient(app)
 
@@ -71,8 +75,12 @@ class TestIncomeRoutes:
             print(f"Response JSON: {response.json()}")
             # Let's also test the mock directly
             print(f"Mock response: {mock_income_service.get_income_data.return_value}")
-            print(f"Mock response status: {mock_income_service.get_income_data.return_value.status}")
-            print(f"Mock response status type: {type(mock_income_service.get_income_data.return_value.status)}")
+            print(
+                f"Mock response status: {mock_income_service.get_income_data.return_value.status}"
+            )
+            print(
+                f"Mock response status type: {type(mock_income_service.get_income_data.return_value.status)}"
+            )
 
         assert response.status_code == 200
         data = response.json()
@@ -221,15 +229,17 @@ class TestBalanceRoutes:
     def client(self, mock_balance_service):
         """创建测试客户端"""
         from fastapi import FastAPI
-        from tushare_query_mcp.api.v1.balance import router, get_balance_service
-        
+
+        from tushare_query_mcp.api.v1.balance import (get_balance_service,
+                                                      router)
+
         app = FastAPI()
         app.include_router(router, prefix="/api/v1/balance", tags=["balance"])
-        
+
         # Override the dependency with the mock service
         def override_get_balance_service():
             return mock_balance_service
-        
+
         app.dependency_overrides[get_balance_service] = override_get_balance_service
         return TestClient(app)
 
@@ -386,15 +396,17 @@ class TestBalanceRoutes:
     def client(self, mock_balance_service):
         """创建测试客户端"""
         from fastapi import FastAPI
-        from tushare_query_mcp.api.v1.balance import router, get_balance_service
-        
+
+        from tushare_query_mcp.api.v1.balance import (get_balance_service,
+                                                      router)
+
         app = FastAPI()
         app.include_router(router, prefix="/api/v1/balance", tags=["balance"])
-        
+
         # Override the dependency with the mock service
         def override_get_balance_service():
             return mock_balance_service
-        
+
         app.dependency_overrides[get_balance_service] = override_get_balance_service
         return TestClient(app)
 
@@ -462,15 +474,17 @@ class TestCashFlowRoutes:
     def client(self, mock_cashflow_service):
         """创建测试客户端"""
         from fastapi import FastAPI
-        from tushare_query_mcp.api.v1.cashflow import router, get_cashflow_service
-        
+
+        from tushare_query_mcp.api.v1.cashflow import (get_cashflow_service,
+                                                       router)
+
         app = FastAPI()
         app.include_router(router, prefix="/api/v1/cashflow", tags=["cashflow"])
-        
+
         # Override the dependency with the mock service
         def override_get_cashflow_service():
             return mock_cashflow_service
-        
+
         app.dependency_overrides[get_cashflow_service] = override_get_cashflow_service
         return TestClient(app)
 

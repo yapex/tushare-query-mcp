@@ -208,8 +208,8 @@ def create_api_response(service_response) -> APIResponse:
     # 支持字典和对象两种格式
     if isinstance(service_response, dict):
         # 字典格式
-        status = service_response.get('status', 'success')
-        if hasattr(status, 'value'):
+        status = service_response.get("status", "success")
+        if hasattr(status, "value"):
             status = status.value
         elif isinstance(status, str):
             status = status
@@ -218,17 +218,17 @@ def create_api_response(service_response) -> APIResponse:
 
         return APIResponse(
             status=status,
-            data=service_response.get('data', []),
-            total_records=service_response.get('total_records', 0),
-            message=service_response.get('message', '查询成功'),
-            from_cache=service_response.get('from_cache', False),
-            query_time=service_response.get('query_time', 0.0),
-            error=service_response.get('error'),
+            data=service_response.get("data", []),
+            total_records=service_response.get("total_records", 0),
+            message=service_response.get("message", "查询成功"),
+            from_cache=service_response.get("from_cache", False),
+            query_time=service_response.get("query_time", 0.0),
+            error=service_response.get("error"),
         )
     else:
         # 对象格式
         status = service_response.status
-        if hasattr(status, 'value'):
+        if hasattr(status, "value"):
             status = status.value
         elif isinstance(status, str):
             status = status
