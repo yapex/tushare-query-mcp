@@ -11,7 +11,7 @@
 
 ## 🎯 项目特性
 
-> 📋 **详细信息请查看 [CLAUDE.md](CLAUDE.md)** - 完整的开发指南和架构文档
+> 📋 **详细信息请查看 [项目文档](docs/)** - 完整的开发指南和架构文档
 
 ### 🌐 架构概览
 - **FastAPI REST API**：标准 HTTP 接口，支持智能缓存和字段选择
@@ -315,6 +315,23 @@ uv run poe lint && uv run poe test
 - **缓存命中率**: >90%
 - **并发支持**: 高并发请求处理
 
+## 📚 项目文档
+
+### 📖 文档导航
+
+- **[📋 文档首页](docs/README.md)** - 完整文档目录
+- **[🏗️ 架构文档](docs/architecture/CLAUDE-architecture-comprehensive.md)** - SOLID架构设计详解
+- **[📊 分析指南](docs/guides/企业资产安全性分析指导.md)** - 企业资产安全性分析框架
+- **[🔧 故障排除](docs/troubleshooting/)** - 常见问题解决方案
+
+### 分析师专用
+
+**企业资产安全性分析** - 完整的财务分析框架：
+- [分析指南](docs/guides/企业资产安全性分析指导.md) - 五大维度评估体系
+- 实施案例：贵州茅台资产安全性分析
+- 20+核心财务指标详解
+- 风险预警和投资建议
+
 ## 🔍 故障排除
 
 ### 常见问题
@@ -335,6 +352,8 @@ uv run poe lint && uv run poe test
    # 检查配置
    uv run python -c "from tushare_query_mcp.main import app; print('OK')"
    ```
+
+更多故障排除请参考：[🔧 故障排除文档](docs/troubleshooting/)
 
 ## 🤝 贡献
 

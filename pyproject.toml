@@ -30,6 +30,7 @@ dependencies = [
     "rich>=14.2.0",
     "matplotlib>=3.10.7",
     "requests>=2.32.5",
+    "toml>=0.10.2",
 ]
 
 [project.optional-dependencies]
@@ -61,7 +62,7 @@ test = {shell = "pytest tests/ -v", help = "运行测试"}
 test-cov = {shell = "pytest tests/ --cov=src/tushare_query_mcp --cov-report=html --cov-report=term", help = "运行测试并生成覆盖率报告"}
 
 # 🚀 服务管理
-start = {cmd = "python scripts/start_server.py", help = "启动所有服务 (FastAPI + MCP)"}
+start = {shell = "python scripts/start_server.py &", help = "后台启动所有服务 (FastAPI + MCP)"}
 stop = {cmd = "python scripts/stop_services.py", help = "停止所有相关服务进程"}
 restart = {shell = "poe stop && sleep 2 && poe start", help = "重启所有服务"}
 

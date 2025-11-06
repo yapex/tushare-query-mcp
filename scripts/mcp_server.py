@@ -17,6 +17,7 @@ from tushare_query_mcp.services.tushare_datasource import TushareDataSource
 from tushare_query_mcp.services.income_service import IncomeService
 from tushare_query_mcp.services.balance_service import BalanceService
 from tushare_query_mcp.services.cashflow_service import CashFlowService
+from tushare_query_mcp.services.field_manager import FieldManager
 from tushare_query_mcp.schemas.request import IncomeRequest, BalanceRequest, CashFlowRequest
 
 
@@ -252,85 +253,100 @@ def _register_tools(server: FastMCP):
         ts_code: Optional[str] = None
     ) -> List[TextContent]:
         """
-        获取指定报表类型的可用字段列表
+        获取增强的财务字段列表，结合 Schema 定义和 API 可用性
+        返回包含字段描述、类型、可用性等完整信息
 
         Args:
             statement_type: 报表类型，可选值: "income"、"balance"、"cashflow"
             ts_code: 股票代码，用于获取实际可用字段（可选）
 
         Returns:
-            List[TextContent]: 包含字段列表的JSON格式文本内容
+            List[TextContent]: 包含增强字段信息的JSON格式文本内容
         """
-        logger.info(f"获取字段列表请求: statement_type={statement_type}, ts_code={ts_code}")
+        logger.info(f"获取增强字段列表请求: statement_type={statement_type}, ts_code={ts_code}")
 
         try:
             if not statement_type or statement_type not in ["income", "balance", "cashflow"]:
                 raise ValueError("报表类型必须是 'income'、'balance' 或 'cashflow'")
 
-            # 预定义的字段映射
-            field_mappings = {
-                "income": {
-                    "basic": ["end_date", "ann_date", "report_type"],
-                    "revenue": ["total_revenue", "revenue", "int_income", "prem_income"],
-                    "cost": ["oper_cost", "fin_exp", "int_exp", "comm_exp"],
-                    "profit": ["operate_profit", "total_profit", "n_income", "n_income_attr_p"],
-                    "eps": ["basic_eps", "diluted_eps"],
-                    "other": ["update_flag", "comp_type", "end_type"]
-                },
-                "balance": {
-                    "basic": ["end_date", "ann_date", "report_type"],
-                    "assets": ["total_assets", "c_cur_assets", "c_ncur_assets", "total_nca"],
-                    "liabilities": ["total_liab", "c_cur_liab", "c_ncur_liab"],
-                    "equity": ["total_equity", "treasury_stock", "minority_gain"],
-                    "specific": ["fix_assets", "cog_inv", "int_assets"],
-                    "other": ["update_flag", "comp_type", "end_type"]
-                },
-                "cashflow": {
-                    "basic": ["end_date", "ann_date", "report_type"],
-                    "operating": ["net_cashflows_act", "cash_rece_pay", "st_cash_inc"],
-                    "investing": ["net_cashflows_inv_act", "invest_cash_rece", "fix_intan_other",
-                                 "long_assets", "cfc_invest", "cfc_disp"],
-                    "financing": ["net_cashflows_fin_act", "fin_rece_pay", "finance_cash_rece"],
-                    "ending": ["c_eq_cash_bal", "ncf_cashflow_e", "exchange_rate"],
-                    "other": ["update_flag", "comp_type", "end_type"]
-                }
-            }
+            # 初始化字段管理器
+            field_manager = FieldManager()
 
-            # 如果提供了股票代码，尝试获取实际可用字段
-            actual_fields = None
+            # 获取 API 可用字段
+            api_fields = None
             if ts_code:
                 try:
                     settings = get_settings()
                     if statement_type == "income":
                         service = IncomeService(settings.tushare_token)
-                        actual_fields = await service.get_available_fields(ts_code)
+                        fields_data = await service.get_available_fields(ts_code)
+                        api_fields = fields_data.get('actual_available_fields', [])
                     elif statement_type == "balance":
                         service = BalanceService(settings.tushare_token)
-                        actual_fields = await service.get_available_fields(ts_code)
+                        fields_data = await service.get_available_fields(ts_code)
+                        api_fields = fields_data.get('actual_available_fields', [])
                     else:  # cashflow
                         service = CashFlowService(settings.tushare_token)
-                        actual_fields = await service.get_available_fields(ts_code)
+                        fields_data = await service.get_available_fields(ts_code)
+                        api_fields = fields_data.get('actual_available_fields', [])
                 except Exception as e:
-                    logger.warning(f"无法获取实际字段列表，使用预定义字段: {str(e)}")
+                    logger.warning(f"无法获取实际字段列表，使用Schema定义: {str(e)}")
+            else:
+                # 使用基础字段集（不依赖特定股票）
+                api_fields = field_manager.get_schema_fields(statement_type).keys()
+
+            # 获取增强字段信息
+            enhanced_fields = field_manager.get_enhanced_fields(statement_type, list(api_fields) if api_fields else [])
+
+            # 按分类组织可用字段
+            field_categories = {}
+            for name, info in enhanced_fields.items():
+                if info.available:  # 只包含可用字段
+                    category = info.category
+                    if category not in field_categories:
+                        field_categories[category] = []
+                    field_categories[category].append(name)
+
+            # 统计信息
+            total_fields = len(enhanced_fields)
+            available_fields = len([f for f in enhanced_fields.values() if f.available])
+            schema_fields = len([f for f in enhanced_fields.values() if f.type != "UNKNOWN"])
+            api_only_fields = len([f for f in enhanced_fields.values() if f.source == "api_only"])
 
             # 构建响应
             response_data = {
                 "statement_type": statement_type,
                 "ts_code": ts_code,
-                "field_categories": field_mappings.get(statement_type, {}),
-                "actual_available_fields": actual_fields,
-                "total_predefined_fields": sum(len(fields) for fields in field_mappings.get(statement_type, {}).values()),
-                "message": f"获取{statement_type}字段列表成功",
+                "field_categories": field_categories,
+                "field_details": {
+                    name: {
+                        "name": info.name,
+                        "description": info.description,
+                        "type": info.type,
+                        "available": info.available,
+                        "category": info.category,
+                        "source": info.source
+                    }
+                    for name, info in enhanced_fields.items()
+                },
+                "statistics": {
+                    "total_fields": total_fields,
+                    "available_fields": available_fields,
+                    "schema_fields": schema_fields,
+                    "api_only_fields": api_only_fields,
+                    "availability_rate": (available_fields / total_fields * 100) if total_fields > 0 else 0
+                },
+                "message": f"获取{statement_type}增强字段列表成功",
                 "timestamp": datetime.now().isoformat()
             }
 
             return [TextContent(type="text", text=json.dumps(response_data, ensure_ascii=False, indent=2))]
 
         except Exception as e:
-            logger.error(f"获取字段列表失败: {str(e)}", exc_info=True)
+            logger.error(f"获取增强字段列表失败: {str(e)}", exc_info=True)
             error_response = {
                 "status": "error",
-                "error": f"获取字段列表失败: {str(e)}",
+                "error": f"获取增强字段列表失败: {str(e)}",
                 "statement_type": statement_type,
                 "ts_code": ts_code,
                 "timestamp": datetime.now().isoformat()
@@ -344,7 +360,8 @@ def _register_tools(server: FastMCP):
         ts_code: Optional[str] = None
     ) -> List[TextContent]:
         """
-        验证指定字段是否存在于对应的财务报表中
+        验证指定字段是否可用，提供详细的字段信息
+        结合 Schema 定义和 API 可用性进行验证
 
         Args:
             statement_type: 报表类型，可选值: "income"、"balance"、"cashflow"
@@ -352,9 +369,9 @@ def _register_tools(server: FastMCP):
             ts_code: 股票代码，用于验证实际可用字段（可选）
 
         Returns:
-            List[TextContent]: 包含验证结果的JSON格式文本内容
+            List[TextContent]: 包含详细验证结果的JSON格式文本内容
         """
-        logger.info(f"字段验证请求: statement_type={statement_type}, fields={fields}")
+        logger.info(f"增强字段验证请求: statement_type={statement_type}, fields={fields}, ts_code={ts_code}")
 
         try:
             if not statement_type or statement_type not in ["income", "balance", "cashflow"]:
@@ -363,65 +380,79 @@ def _register_tools(server: FastMCP):
             if not fields or not isinstance(fields, list):
                 raise ValueError("字段列表不能为空且必须是列表格式")
 
-            # 执行验证
-            if ts_code:
-                # 使用实际股票代码验证
-                settings = get_settings()
-                if statement_type == "income":
-                    service = IncomeService(settings.tushare_token)
-                    validation_result = await service.validate_fields(ts_code, fields)
-                elif statement_type == "balance":
-                    service = BalanceService(settings.tushare_token)
-                    validation_result = await service.validate_fields(ts_code, fields)
-                else:  # cashflow
-                    service = CashFlowService(settings.tushare_token)
-                    validation_result = await service.validate_fields(ts_code, fields)
-            else:
-                # 使用预定义字段验证
-                field_mappings = {
-                    "income": ["end_date", "ann_date", "report_type", "total_revenue", "revenue",
-                              "int_income", "prem_income", "oper_cost", "fin_exp", "int_exp",
-                              "comm_exp", "operate_profit", "total_profit", "n_income",
-                              "n_income_attr_p", "basic_eps", "diluted_eps"],
-                    "balance": ["end_date", "ann_date", "report_type", "total_assets",
-                                "c_cur_assets", "c_ncur_assets", "total_nca", "total_liab",
-                                "c_cur_liab", "c_ncur_liab", "total_equity", "treasury_stock",
-                                "minority_gain", "fix_assets", "cog_inv", "int_assets"],
-                    "cashflow": ["end_date", "ann_date", "report_type", "net_cashflows_act",
-                                 "cash_rece_pay", "st_cash_inc", "net_cashflows_inv_act",
-                                 "invest_cash_rece", "fix_intan_other", "long_assets",
-                                 "cfc_invest", "cfc_disp", "net_cashflows_fin_act",
-                                 "fin_rece_pay", "finance_cash_rece", "c_eq_cash_bal",
-                                 "ncf_cashflow_e", "exchange_rate"]
-                }
+            # 初始化字段管理器
+            field_manager = FieldManager()
 
-                valid_fields = field_mappings.get(statement_type, [])
-                validation_result = {
-                    "valid_fields": [f for f in fields if f in valid_fields],
-                    "invalid_fields": [f for f in fields if f not in valid_fields],
-                    "total_fields": len(fields),
-                    "valid_count": len([f for f in fields if f in valid_fields]),
-                    "invalid_count": len([f for f in fields if f not in valid_fields])
-                }
+            # 获取 API 可用字段
+            api_fields = None
+            if ts_code:
+                try:
+                    settings = get_settings()
+                    if statement_type == "income":
+                        service = IncomeService(settings.tushare_token)
+                        fields_data = await service.get_available_fields(ts_code)
+                        api_fields = fields_data.get('actual_available_fields', [])
+                    elif statement_type == "balance":
+                        service = BalanceService(settings.tushare_token)
+                        fields_data = await service.get_available_fields(ts_code)
+                        api_fields = fields_data.get('actual_available_fields', [])
+                    else:  # cashflow
+                        service = CashFlowService(settings.tushare_token)
+                        fields_data = await service.get_available_fields(ts_code)
+                        api_fields = fields_data.get('actual_available_fields', [])
+                except Exception as e:
+                    logger.warning(f"无法获取实际字段列表，使用Schema定义: {str(e)}")
+            else:
+                # 使用 Schema 字段
+                api_fields = field_manager.get_schema_fields(statement_type).keys()
+
+            # 获取增强字段信息并进行验证
+            enhanced_fields = field_manager.get_enhanced_fields(statement_type, list(api_fields) if api_fields else [])
+            validation_result = field_manager.validate_fields(statement_type, fields, list(api_fields) if api_fields else None)
 
             # 构建响应
             response_data = {
                 "statement_type": statement_type,
                 "ts_code": ts_code,
                 "fields_requested": fields,
-                "validation_result": validation_result,
-                "success_rate": validation_result.get("valid_count", 0) / len(fields) * 100 if fields else 0,
-                "message": f"字段验证完成，{validation_result.get('valid_count', 0)}个有效，{validation_result.get('invalid_count', 0)}个无效",
+                "validation_result": {
+                    "valid_fields": validation_result["valid_fields"],
+                    "invalid_fields": validation_result["invalid_fields"],
+                    "total_fields": validation_result["total_fields"],
+                    "valid_count": validation_result["valid_count"],
+                    "invalid_count": validation_result["invalid_count"],
+                    "success_rate": (validation_result["valid_count"] / len(fields) * 100) if fields else 0
+                },
+                "field_details": validation_result["field_details"],
+                "statistics": {
+                    "by_category": {},
+                    "by_source": {
+                        "schema_fields": len([f for f in validation_result["valid_fields"]
+                                              if enhanced_fields.get(f, {}).source in ["schema", "both"]]),
+                        "api_only_fields": len([f for f in validation_result["valid_fields"]
+                                                if enhanced_fields.get(f, {}).source == "api_only"])
+                    }
+                },
+                "message": f"字段验证完成，{validation_result['valid_count']}个有效，{validation_result['invalid_count']}个无效",
                 "timestamp": datetime.now().isoformat()
             }
+
+            # 按分类统计有效字段
+            for field_name in validation_result["valid_fields"]:
+                field_info = enhanced_fields.get(field_name)
+                if field_info:
+                    category = field_info.category
+                    if category not in response_data["statistics"]["by_category"]:
+                        response_data["statistics"]["by_category"][category] = 0
+                    response_data["statistics"]["by_category"][category] += 1
 
             return [TextContent(type="text", text=json.dumps(response_data, ensure_ascii=False, indent=2))]
 
         except Exception as e:
-            logger.error(f"字段验证失败: {str(e)}", exc_info=True)
+            logger.error(f"增强字段验证失败: {str(e)}", exc_info=True)
             error_response = {
                 "status": "error",
-                "error": f"字段验证失败: {str(e)}",
+                "error": f"增强字段验证失败: {str(e)}",
                 "statement_type": statement_type,
                 "fields": fields,
                 "ts_code": ts_code,
